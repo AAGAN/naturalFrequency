@@ -33,7 +33,8 @@ const int NEO_PIXEL_PIN = 3;           // Output pin for neo pixels.
 const int NEO_PIXEL_COUNT = 16;         // Number of neo pixels.  You should be able to increase this without
                                        // any other changes to the program.
 const int MAX_CHARS = 65;              // Max size of the input command buffer
-
+const int BAD_FREQ =  1935;             // Natural Frequency of discharged cannister
+const int GOOD_FREQ = 2150;             // Natural Frequency of full cannister  
 
 ////////////////////////////////////////////////////////////////////////////////
 // INTERNAL STATE
@@ -139,51 +140,68 @@ float intensityDb(float intensity) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void toneLoop() {
+
   // Calculate the low and high frequency bins for the currently expected tone.
-  int lowBin = frequencyToBin(TONE_LOWS[tonePosition] - TONE_ERROR_MARGIN_HZ);
-  int highBin = frequencyToBin(TONE_HIGHS[tonePosition] + TONE_ERROR_MARGIN_HZ);
+  int lowBinGood = frequencyToBin(GOOD_FREQ - TONE_ERROR_MARGIN_HZ);
+  int highBinGood = frequencyToBin(GOOD_FREQ + TONE_ERROR_MARGIN_HZ);
+  int lowBinBad = frequencyToBin(BAD_FREQ - TONE_ERROR_MARGIN_HZ);
+  int highbinBad = frequencyToBin(BAD_FREQ + TONE_ERROR_MARGIN_HZ);
+
   // Get the average intensity of frequencies inside and outside the tone window.
-  float window, other;
-  windowMean(magnitudes, lowBin, highBin, &window, &other);
-  window = intensityDb(window);
-  other = intensityDb(other);
-  // Check if tone intensity is above the threshold to detect a step in the sequence.
-  if ((window - other) >= TONE_THRESHOLD_DB) {
-    // Start timing the window if this is the first in the sequence.
-    unsigned long time = millis();
-    if (tonePosition == 0) {
-      toneStart = time;
-    }
-    // Increment key position if still within the window of key input time.
-    if (toneStart + TONE_WINDOW_MS > time) {
-      tonePosition += 1;
-    }
-    else {
-      // Outside the window of key input time, reset back to the beginning key.
-      tonePosition = 0;
-    }
+  float windowBad, otherBad, windowGood, otherGood;
+  windowMean(magnitudes, lowBinGood, highBinGood, &windowGood, &otherGood);
+  windowMean(magnitudes, lowBinBad, highbinBad, &windowBad, &otherBad);
+  
+  windowGood = intensityDb(windowGood);
+  otherGood = intensityDb(otherGood);
+
+  windowBad = intensityDb(windowBad);
+  otherBad = intensityDb(otherBad);
+
+  //Check if tone intensity is above the threshold to detect a step in the sequence
+  Serial.println(windowBad);
+  if ((windowGood - otherGood) >= TONE_THRESHOLD_DB){
+     toneDetected(1);
+     Serial.println("GOOD");
+  }else if ((windowBad - otherBad) >= TONE_THRESHOLD_DB){
+     toneDetected(2);
+     Serial.println("BAD");
   }
-  // Check if the entire sequence was passed through.
-  if (tonePosition >= sizeof(TONE_LOWS)/sizeof(int)) {
-    toneDetected();
-    tonePosition = 0;
-  }
+
 }
 
-void toneDetected() {
+//Choose if a bad of good cylinder was hit
+void toneDetected(int choice ) {
   // Flash the LEDs four times.
-  int pause = 250;
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < NEO_PIXEL_COUNT; ++j) {
-      pixels.setPixelColor(j, pixels.Color(255, 0, 0));
+  if (choice == 1){
+     int pause = 250;
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < NEO_PIXEL_COUNT; ++j) {
+        pixels.setPixelColor(j, pixels.Color(0, 50, 0));
+      }
+      pixels.show();
+      delay(pause);
+      for (int j = 0; j < NEO_PIXEL_COUNT; ++j) {
+        pixels.setPixelColor(j, 0);
+      }
+      pixels.show();
+      delay(pause);
     }
-    pixels.show();
-    delay(pause);
-    for (int j = 0; j < NEO_PIXEL_COUNT; ++j) {
-      pixels.setPixelColor(j, 0);
+  }
+  else if( choice == 2){
+    int pause = 250;
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < NEO_PIXEL_COUNT; ++j) {
+        pixels.setPixelColor(j, pixels.Color(50, 0, 0));
+      }
+      pixels.show();
+      delay(pause);
+      for (int j = 0; j < NEO_PIXEL_COUNT; ++j) {
+        pixels.setPixelColor(j, 0);
+      }
+      pixels.show();
+      delay(pause);
     }
-    pixels.show();
-    delay(pause);
   }
 }
 
