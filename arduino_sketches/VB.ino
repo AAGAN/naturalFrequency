@@ -56,7 +56,7 @@ void loop()
     //Determine what value has been sent
     switch (val) {
       case 'C':  //Calibration State
-        Connection();
+        Connection(); //switches the onboard LED's state
         break;
       case 'S':  //Start Test State
         Serial.println("Start Test");
@@ -190,21 +190,26 @@ void updateVariables(int index, char* value) {
 
 void startTest(){
   char data;  
-  samplingBegin();
+  
   for (int i = 0; i < num_trials; i++)
   {
-    
+    // strike the cylinder
     digitalWrite(SOL_PIN, HIGH);
     delay(solenoid_on_time);
     digitalWrite(SOL_PIN,LOW);
-    delay(cycle_time-solenoid_on_time);
-  
+    samplingBegin();
     
-    while (!samplingIsDone()){
+    
+    delay(cycle_time-solenoid_on_time);
+    //while might be blocking the code and another way might need to be use 
+    while (!samplingIsDone())
+    {
 
-     }
+    }
+    
+    
 
-      // Run FFT on sample data.
+      // Run FFT on sampled data.
       arm_cfft_radix4_instance_f32 fft_inst;
       arm_cfft_radix4_init_f32(&fft_inst, FFT_SIZE, 0, 1);
       arm_cfft_radix4_f32(&fft_inst, samples);
@@ -212,8 +217,9 @@ void startTest(){
       arm_cmplx_mag_f32(samples, magnitudes, FFT_SIZE);
 
       detectFreq();
-      samplingBegin();
+      
 
+    // emergency stop by pressing s and enter on the VB interface
     if(Serial.available() > 0)
       data = Serial.read();
       if(data == 's'){
@@ -239,6 +245,7 @@ void detectFreq(){
   windowIntensity = intensityDb(window);
   otherIntensity = intensityDb(other);
   
+  //Sending data back to the computer (VB interface)
     Serial.print(windowIntensity);
   Serial.print(',');
   Serial.print(otherIntensity);
