@@ -100,7 +100,8 @@ app.layout = html.Div(style={'backgroundColor':colors['background']},children=[
                 )
             ,className="five columns")
         ],className='row')
-    ])    
+    ]),
+    html.Button('Test Cylinder', id='testButton')
 ],className="ten columns offset-by-one")
 
 
@@ -109,6 +110,56 @@ def average(alist):
         return sum(alist) / len(alist)
     else:
         return 0
+
+# @app.callback(
+#     Output(component_id='measuredFreq', component_property='value'),
+#     [Input(component_id='freq', component_property='value')]
+# )
+# def testCylinder(freq):
+#     ser = serial.Serial('COM11', baudrate=9600, timeout=1)
+#     frequencies = []
+#     for i in range(5):
+#         sum = 0
+#         j = 0
+#         ser.write(b'a')
+#         t_end = time.time() + 1
+#         while time.time() < t_end:
+#             for line in ser:
+#                 sum += float((line.decode('ascii')[:-2]))
+#                 j=j+1
+#         if (j > 0):
+#             frequencies.append(int(sum/j))    
+#     ser.close()
+#     return int(average(frequencies))
+
+# @app.callback(
+#     Output(component_id='status', component_property='value'),
+#     [Input(component_id='freq',component_property='value'),Input(component_id='measuredFreq',component_property='value')]
+# )
+# def updateStatus(freq, mfreq):
+#     if (1000 < freq < 4500):
+#         massLoss = 0.4242*(freq-mfreq)
+#         if (massLoss<=14):
+#             return 'Cylinder is full.'
+#         else:
+#             return 'Empty, mass loss = {:.0f} grams.'.format(massLoss)
+#     else:
+#         return 'Invalid inputs.'
+
+# @app.callback(
+#     Output(component_id='temp', component_property='value'),
+#     [Input(component_id='freq',component_property='value'),Input(component_id='measuredFreq',component_property='value')]
+# )
+# def getTemperature(a,b):
+#     ser = serial.Serial('COM11', baudrate=9600, timeout=1)
+#     temperature = 0
+#     ser.write(b't')
+#     t_end = time.time() + 0.5
+#     while time.time() < t_end:
+#         for line in ser:
+#             temperature = float((line.decode('ascii')[:-2]))   
+#     ser.close()
+#     return int(temperature)
 
 @app.callback(
     [Output(component_id='measuredFreq', component_property='value'),
@@ -138,7 +189,6 @@ def testCylinder(freq):
     while time.time() < t_end:
         for line in ser:
             temperature = float((line.decode('ascii')[:-2]))   
-    ser.close()
 
     statusMessage = ''
     if (1000 < freq < 4500):
@@ -147,8 +197,12 @@ def testCylinder(freq):
             statusMessage = 'Cylinder is full.'
         else:
             statusMessage = 'Empty, mass loss = {:.0f} grams.'.format(massLoss)
+            ser.write(b'1')
     else:
         statusMessage = 'Invalid inputs.'
+        ser.write(b'1')
+
+    ser.close()
 
     return averageFreq, statusMessage, int(temperature)
     
